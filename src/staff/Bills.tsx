@@ -84,7 +84,7 @@ export default function Bills() {
               {sum('total') > sum('paid') && <span className="badge rose">Due {inr(sum('total') - sum('paid'))}</span>}
             </div>
             <div className="table-wrap">
-              <table className="table">
+              <table className="table rt">
                 <thead>
                   <tr>
                     <th>Bill</th>

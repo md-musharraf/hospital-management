@@ -153,7 +153,7 @@ export default function Dashboard() {
                 <Link to="/staff/front-desk" className="btn btn-ghost btn-sm">Open queue</Link>
               </div>
               <div className="table-wrap">
-                <table className="table">
+                <table className="table rt">
                   <thead>
                     <tr>
                       <th>Doctor</th>

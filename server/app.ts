@@ -1,5 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
-import { initDb } from './db.ts'
+import { db, initDb } from './db.ts'
 import { seed } from './seed.ts'
 import { purgeExpired } from './auth.ts'
 import { HttpError } from './util.ts'
@@ -15,7 +15,9 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
 
   const app = express()
   app.disable('x-powered-by')
-  app.set('trust proxy', 'loopback, linklocal, uniquelocal')
+  // Behind Railway's proxy the client IP is one hop away (rate limits need the real IP). TRUST_PROXY overrides.
+  const trust = process.env.TRUST_PROXY ?? (process.env.RAILWAY_ENVIRONMENT ? '1' : 'loopback, linklocal, uniquelocal')
+  app.set('trust proxy', /^\d+$/.test(trust) ? Number(trust) : trust)
 
   app.use((_req, res, next) => {
     res.set({
@@ -31,6 +33,12 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
       )
     next()
+  })
+
+  // Health check for Railway / uptime monitors: proves the process and the database answer.
+  app.get('/api/health', (_req, res) => {
+    db.prepare('SELECT 1').get()
+    res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) })
   })
 
   const api = express.Router()

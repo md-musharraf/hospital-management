@@ -165,3 +165,30 @@ test('doctor queue: call next only for own patients', async () => {
   const other = (await reception('/catalog/doctors')).data.find((d: any) => d.id !== me.doctor_id)
   assert.equal((await doctor(`/queue/${other.id}/next`, {})).status, 403)
 })
+
+test('patient quick search: multi-word, mobile digits, UHID, context, money hidden from doctors', async () => {
+  const reception = await login('reception')
+  const doctor = await login('doctor')
+  const p = (await reception('/patients', { name: 'Zoya Qureshi', phone: '9876012345', age: 29, gender: 'Female', address: 'Rasikpur Lane' })).data
+  await reception('/bills', { type: 'opd', patientId: p.id, doctorId: 1, items: [], paid: 0, mode: 'cash' }) // leaves a due + today's token
+
+  const find = async (q: string, who = reception) => (await who(`/patients?q=${encodeURIComponent(q)}`)).data
+  const ids = (r: any) => r.rows.map((x: any) => x.id)
+  assert.ok(ids(await find('zoya')).includes(p.id), 'by name')
+  assert.ok(ids(await find('012345')).includes(p.id), 'by mobile digits')
+  assert.ok(ids(await find(p.uhid)).includes(p.id), 'by UHID')
+  assert.ok(ids(await find('qureshi rasikpur')).includes(p.id), 'every word must match (name + village)')
+  assert.ok(!ids(await find('qureshi male')).includes(p.id), 'gender word must match exactly')
+  assert.equal((await find('%')).total, 0, '% is literal, not a wildcard')
+
+  const hit = (await find('zoya')).rows[0]
+  assert.equal(hit.today.status, 'waiting')
+  assert.ok(hit.due > 0)
+  assert.equal((await find('zoya', doctor)).rows[0].due, undefined, 'doctors do not see dues')
+})
+
+test('health check answers without login', async () => {
+  const r = await client()('/health')
+  assert.equal(r.status, 200)
+  assert.equal(r.data.ok, true)
+})

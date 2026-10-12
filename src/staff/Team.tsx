@@ -36,7 +36,7 @@ export default function Team() {
           <Empty icon={ShieldCheck} title="No staff" />
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table rt">
               <thead>
                 <tr><th>Name</th><th>Username</th><th>Role</th><th className="hide-sm">Since</th><th>Status</th><th /></tr>
               </thead>

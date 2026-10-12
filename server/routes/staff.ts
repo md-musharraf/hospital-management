@@ -48,16 +48,72 @@ staffRoutes.get('/stream', staff(), (req, res) => subscribe(req, res, { public: 
 // ---- patients ----
 const withUhid = (p: any) => p && { ...p, uhid: uhid(p.id) }
 
+/**
+ * Multi-keyword patient search for the quick-suggestion panel. Every word must match one of:
+ * name, address (contains), mobile digits (contains), UHID (P000123 / 123) or gender. Empty query =
+ * most recently active patients. Each row carries context: today's token, last visit, visits, dues.
+ */
+export function searchPatients(q: string, limit: number, role: Role) {
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6)
+  const where: string[] = []
+  const params: (string | number)[] = []
+  for (const t of terms) {
+    const like = `%${t.replace(/[\\%_]/g, (m) => '\\' + m)}%` // user's % and _ are literal
+    const digits = /^\+?\d+$/.test(t) ? t.replace(/\D/g, '') : '' // only all-digit words match mobiles
+    const id = /^p?0*(\d{1,7})$/.exec(t)?.[1]
+    const or = ["lower(p.name) LIKE ? ESCAPE '\\'", "lower(p.address) LIKE ? ESCAPE '\\'", 'lower(p.gender) = ?']
+    params.push(like, like, t)
+    if (digits.length >= 2) {
+      or.push('p.phone LIKE ?')
+      params.push(`%${digits}%`)
+    }
+    if (id) {
+      or.push('p.id = ?')
+      params.push(Number(id))
+    }
+    where.push(`(${or.join(' OR ')})`)
+  }
+  const cond = where.length ? `WHERE ${where.join(' AND ')}` : ''
+  const day = today()
+  const whole = q.toLowerCase().trim()
+  const exactId = /^p?0*(\d{1,7})$/.exec(whole)?.[1]
+  const rows = all<any>(
+    `SELECT p.*,
+       (SELECT COUNT(*) FROM appointments a WHERE a.patient_id = p.id AND a.status = 'done') visits,
+       (SELECT a.date || '|' || d.name FROM appointments a JOIN doctors d ON d.id = a.doctor_id
+          WHERE a.patient_id = p.id AND a.status != 'cancelled' AND a.date <= ? ORDER BY a.date DESC, a.id DESC LIMIT 1) last_visit,
+       (SELECT json_object('id', a.id, 'token', a.token, 'status', a.status, 'doctorId', a.doctor_id, 'doctor', d.name)
+          FROM appointments a JOIN doctors d ON d.id = a.doctor_id
+          WHERE a.patient_id = p.id AND a.date = ? AND a.status IN ('booked','waiting','called') ORDER BY a.id LIMIT 1) today_appt,
+       (SELECT COALESCE(SUM(b.total - b.paid), 0) FROM bills b WHERE b.patient_id = p.id AND b.status = 'active') due
+     FROM patients p ${cond}
+     ORDER BY (p.phone != '' AND p.phone = ?) DESC, (p.id = ?) DESC, (lower(p.name) = ?) DESC, (lower(p.name) LIKE ?) DESC,
+       MAX(COALESCE((SELECT MAX(created_at) FROM bills b WHERE b.patient_id = p.id), ''),
+           COALESCE((SELECT MAX(created_at) FROM appointments a WHERE a.patient_id = p.id), ''), p.created_at) DESC
+     LIMIT ?`,
+    day, day, ...params, whole.replace(/\D/g, '') || '~', exactId ? Number(exactId) : -1, whole, `${whole}%`, limit,
+  )
+  const total = cond ? one<{ n: number }>(`SELECT COUNT(*) n FROM patients p ${cond}`, ...params)!.n : one<{ n: number }>('SELECT COUNT(*) n FROM patients')!.n
+  const seesMoney = role !== 'doctor'
+  return {
+    total,
+    rows: rows.map((r) => {
+      const [lastDate, lastDoctor] = r.last_visit ? String(r.last_visit).split('|') : [null, null]
+      return {
+        ...withUhid(r),
+        last_visit: undefined,
+        lastVisit: lastDate ? { date: lastDate, doctor: lastDoctor } : null,
+        today: r.today_appt ? JSON.parse(r.today_appt) : null,
+        today_appt: undefined,
+        due: seesMoney ? r.due : undefined,
+      }
+    }),
+  }
+}
+
 staffRoutes.get('/patients', staff(), (req, res) => {
-  const q = String(req.query.q ?? '').trim().slice(0, 60)
-  const byId = /^p?0*(\d+)$/i.exec(q)
-  const rows = q
-    ? all(
-        `SELECT * FROM patients WHERE name LIKE ? OR phone LIKE ? OR id = ? ORDER BY (phone = ?) DESC, id DESC LIMIT 30`,
-        `%${q}%`, `${q.replace(/\D/g, '') || '~'}%`, byId ? Number(byId[1]) : -1, q,
-      )
-    : all('SELECT * FROM patients ORDER BY id DESC LIMIT 30')
-  res.json(rows.map(withUhid))
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 12))
+  res.json(searchPatients(String(req.query.q ?? '').trim().slice(0, 80), limit, req.user!.role))
 })
 
 function patientBody(b: any) {

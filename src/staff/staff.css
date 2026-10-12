@@ -598,3 +598,315 @@
     font-size: 22px;
   }
 }
+
+/* ============ Global patient search (Ctrl K) ============ */
+.gsearch {
+  position: relative;
+  width: min(420px, 36vw);
+}
+.gsearch-btn,
+.gsearch-back {
+  display: none;
+}
+.gsearch-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gsearch .input {
+  height: 40px;
+  padding-right: 64px;
+  background: #fff;
+}
+.gsearch-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  translate: 0 -50%;
+  font: 700 11px var(--font);
+  color: var(--ink-3);
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  pointer-events: none;
+}
+.gsearch-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.gsearch-clear:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.gsearch-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(72vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-3);
+  animation: rise 0.22s var(--ease);
+}
+.gsearch-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.gsearch-empty {
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+.gsearch-f {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px 2px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
+.hit {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.hit.active {
+  background: var(--brand-50);
+}
+.hit-av {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  font-size: 15px;
+  background: var(--grad);
+  flex: none;
+}
+.hit-main {
+  min-width: 0;
+  flex: 1;
+}
+.hit-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.hit-top b {
+  font-size: 15px;
+  max-width: 100%;
+}
+.hit-sub {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.hit-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+mark {
+  background: rgba(250, 204, 21, 0.45);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 1px;
+}
+.picker-list.hits {
+  max-height: 420px;
+}
+.picker-list.hits .hit {
+  width: 100%;
+}
+@media (max-width: 1100px) {
+  .gsearch {
+    width: min(320px, 34vw);
+  }
+  .gsearch-kbd {
+    display: none;
+  }
+}
+/* Phones & small tablets: icon in the bar, full-screen search sheet when open */
+@media (max-width: 720px) {
+  .gsearch {
+    width: auto;
+    position: static;
+  }
+  .gsearch:not(.open) .gsearch-field {
+    display: none;
+  }
+  .gsearch-btn {
+    display: inline-flex;
+  }
+  .gsearch.open {
+    position: fixed;
+    inset: 0;
+    z-index: 85;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    background: var(--bg);
+    animation: fade-in 0.2s;
+  }
+  .gsearch.open .gsearch-btn {
+    display: none;
+  }
+  .gsearch.open .gsearch-back {
+    display: inline-flex;
+  }
+  .gsearch .input {
+    height: 46px;
+    font-size: 16px; /* no iOS zoom on focus */
+  }
+  .gsearch-panel {
+    position: static;
+    width: auto;
+    max-height: none;
+    flex: 1;
+    margin-top: 10px;
+    box-shadow: none;
+  }
+}
+
+/* ============ Tables become cards on phones ============ */
+@media (max-width: 640px) {
+  .table.rt thead {
+    display: none;
+  }
+  .table.rt,
+  .table.rt tbody,
+  .table.rt tr,
+  .table.rt td {
+    display: block;
+    width: 100%;
+  }
+  .table.rt tr {
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .table.rt tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .table.rt td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 3px 0;
+    border: 0;
+    text-align: right;
+  }
+  .table.rt td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: left;
+  }
+  .table.rt td:first-child {
+    display: block;
+    text-align: left;
+    padding-bottom: 6px;
+  }
+  .table.rt td:first-child::before,
+  .table.rt td[data-label='']::before {
+    display: none;
+  }
+  .table.rt td:empty {
+    display: none;
+  }
+}
+
+/* ============ Mobile billing: total + save always reachable ============ */
+.pay-bar {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .pay-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px -16px -60px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -10px 30px -20px rgba(11, 31, 51, 0.4);
+  }
+  .pay-bar .btn {
+    flex: 1;
+  }
+}
+
+/* Tablet: a little tighter so two-column pages still breathe */
+@media (min-width: 861px) and (max-width: 1100px) {
+  .shell {
+    grid-template-columns: 228px minmax(0, 1fr);
+  }
+  .content {
+    padding: 22px 20px 60px;
+  }
+  .topbar {
+    padding: 0 20px;
+  }
+}
+.card-h {
+  flex-wrap: wrap;
+}
+@media (max-width: 720px) {
+  /* backdrop-filter would trap the fixed search sheet inside the bar */
+  .topbar {
+    backdrop-filter: none;
+    background: var(--bg);
+  }
+}

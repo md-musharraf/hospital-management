@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router'
 import { CalendarPlus, ChevronRight, Monitor, Receipt, RotateCcw, SkipForward, Ticket, UserPlus } from 'lucide-react'
 import { api, invalidate, useApi } from '../api.ts'
 import { Button, Empty, Field, Modal, Skeleton, StatusBadge, localDay, toast, toastError } from '../ui.tsx'
-import { NewPatientModal, PatientPicker, type Patient } from './common.tsx'
+import { NewPatientModal, type Patient } from './common.tsx'
+import { PatientPicker } from './PatientSearch.tsx'
 
 type QAppt = { id: number; code: string; token: number; status: string; source: string; patient_id: number; name: string; age: number | null; gender: string; phone: string; billed: number }
 type QDoc = { id: number; name: string; room: string; start_time: string; end_time: string; fee: number; department: string; appointments: QAppt[] }

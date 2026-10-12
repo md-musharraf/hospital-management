@@ -92,14 +92,18 @@ function demo(password: string) {
   const pharmacy = user('Sunil (Pharmacy)', 'pharmacy', 'pharmacy')
 
   // ---- 14 days of history + a live-looking today ----
-  const first = ['Aarav', 'Priya', 'Rahul', 'Anjali', 'Vikash', 'Sunita', 'Amit', 'Kiran', 'Deepak', 'Pooja', 'Suresh', 'Meena', 'Rakesh', 'Neha', 'Manoj', 'Rekha', 'Sanjay', 'Asha', 'Ajay', 'Geeta', 'Imran', 'Fatima', 'Gurpreet', 'Lakshmi']
+  const first = {
+    Male: ['Aarav', 'Rahul', 'Vikash', 'Amit', 'Deepak', 'Suresh', 'Rakesh', 'Manoj', 'Sanjay', 'Ajay', 'Imran', 'Gurpreet'],
+    Female: ['Priya', 'Anjali', 'Sunita', 'Kiran', 'Pooja', 'Meena', 'Neha', 'Rekha', 'Asha', 'Geeta', 'Fatima', 'Lakshmi'],
+  }
+  const villages = ['Main Road', 'Station Para', 'Rasikpur', 'Kumarpara', 'Shiv Nagar', 'Bandarjori', 'Dudhani', 'Hijla']
   const last = ['Kumar', 'Singh', 'Sharma', 'Devi', 'Yadav', 'Gupta', 'Mahto', 'Soren', 'Khan', 'Verma', 'Mishra', 'Prasad', 'Hembrom', 'Ansari']
   const patients: number[] = []
   const newPatient = (day: string) => {
     const g = rnd() < 0.5 ? 'Male' : 'Female'
     const id = insert(
       'INSERT INTO patients (name, phone, age, gender, address, created_at, day) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      `${pickOne(first)} ${pickOne(last)}`, `90000${String(patients.length + 1).padStart(5, '0')}`, between(2, 78), g, '', at(day, 9, 0), day,
+      `${pickOne(first[g])} ${pickOne(last)}`, `90000${String(patients.length + 1).padStart(5, '0')}`, between(2, 78), g, pickOne(villages), at(day, 9, 0), day,
     )
     patients.push(id)
     return id

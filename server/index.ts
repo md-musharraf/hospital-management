@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
-import { join } from 'node:path'
+import { extname, join, normalize, sep } from 'node:path'
+import { brotliCompressSync } from 'node:zlib'
 import express from 'express'
 
 const root = join(import.meta.dirname, '..')
@@ -19,9 +20,12 @@ if (!existsSync(envPath) && !prod) {
 }
 if (existsSync(envPath)) process.loadEnvFile(envPath)
 
-// Railway & Cloud deployment support for persistent volume storage
-const dataDir = process.env.DATA_DIR || join(root, '.data')
+// Railway & Cloud deployment support for persistent volume storage.
+// Railway sets RAILWAY_VOLUME_MOUNT_PATH when a volume is attached, so no extra variable is needed.
+const dataDir = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || join(root, '.data')
 const dbPath = process.env.DB_PATH || join(dataDir, 'hospital.db')
+if (process.env.RAILWAY_ENVIRONMENT && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !process.env.DATA_DIR && !process.env.DB_PATH)
+  console.warn('⚠️  No Railway volume attached — the database is wiped on every redeploy. Add a volume (mount path /data).')
 const isDemo = process.env.SEED_DEMO !== 'false'
 const defaultPass = process.env.DEMO_PASSWORD || (prod ? 'demo12345' : randomBytes(6).toString('base64url'))
 
@@ -37,6 +41,21 @@ const server = createServer(app)
 
 if (prod) {
   const dist = join(root, 'dist')
+  // Serve the .br/.gz files written by scripts/compress.js when the browser accepts them.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next()
+    const ae = req.get('accept-encoding') ?? ''
+    const enc = /\bbr\b/.test(ae) ? 'br' : /\bgzip\b/.test(ae) ? 'gzip' : ''
+    const file = join(dist, normalize(decodeURIComponent(req.path)))
+    const packed = enc && file.startsWith(dist + sep) && file + (enc === 'br' ? '.br' : '.gz')
+    if (!packed || !existsSync(packed)) return next()
+    res.set({
+      'Content-Encoding': enc,
+      Vary: 'Accept-Encoding',
+      'Cache-Control': /[\\/]assets[\\/]/.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache',
+    })
+    res.type(extname(file)).sendFile(packed)
+  })
   app.use(
     express.static(dist, {
       index: false,
@@ -47,7 +66,12 @@ if (prod) {
     }),
   )
   const html = readFileSync(join(dist, 'index.html'))
-  app.use((req, res) => res.status(req.method === 'GET' ? 200 : 404).type('html').set('Cache-Control', 'no-cache').send(html))
+  const htmlBr = brotliCompressSync(html)
+  app.use((req, res) => {
+    res.status(req.method === 'GET' ? 200 : 404).type('html').set({ 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding' })
+    if (/\bbr\b/.test(req.get('accept-encoding') ?? '')) res.set('Content-Encoding', 'br').send(htmlBr)
+    else res.send(html)
+  })
 } else {
   const { createServer: vite } = await import('vite')
   const v = await vite({ root, server: { middlewareMode: true, hmr: { server } }, appType: 'spa' })
@@ -68,7 +92,12 @@ server.listen(port, host, () => {
 // Graceful shutdown on Railway/Docker redeploy
 const shutdown = () => {
   console.log('Gracefully stopping server...')
-  server.close(() => process.exit(0))
+  server.close(async () => {
+    ;(await import('./db.ts')).db.close() // checkpoint the SQLite WAL into the main file
+    process.exit(0)
+  })
+  // Live-sync (SSE) streams never end on their own; cut them after a short grace period.
+  setTimeout(() => server.closeAllConnections(), 2000).unref()
 }
 process.on('SIGTERM', shutdown)
 process.on('SIGINT', shutdown)

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   source TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', notified INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL, called_at TEXT, done_at TEXT, UNIQUE (doctor_id, date, token));
 CREATE INDEX IF NOT EXISTS appointments_date ON appointments(date, doctor_id);
+CREATE INDEX IF NOT EXISTS appointments_patient ON appointments(patient_id);
 CREATE TABLE IF NOT EXISTS bills (
   id INTEGER PRIMARY KEY, bill_no TEXT NOT NULL UNIQUE, type TEXT NOT NULL CHECK (type IN ('opd','lab','pharmacy')),
   patient_id INTEGER NOT NULL REFERENCES patients(id), doctor_id INTEGER REFERENCES doctors(id),
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS bills (
   created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, day TEXT NOT NULL,
   CHECK (paid >= 0 AND paid <= total AND discount <= subtotal));
 CREATE INDEX IF NOT EXISTS bills_day ON bills(day);
+CREATE INDEX IF NOT EXISTS bills_patient ON bills(patient_id);
 CREATE TABLE IF NOT EXISTS bill_items (
   id INTEGER PRIMARY KEY, bill_id INTEGER NOT NULL REFERENCES bills(id), kind TEXT NOT NULL, ref_id INTEGER,
   name TEXT NOT NULL, qty INTEGER NOT NULL CHECK (qty > 0), rate INTEGER NOT NULL, amount INTEGER NOT NULL);

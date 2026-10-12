@@ -1,108 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Ban, MessageCircle, Phone, Printer, Search, UserPlus, Wallet, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Ban, MessageCircle, Phone, Printer, Wallet } from 'lucide-react'
 import { api, invalidate } from '../api.ts'
 import { BillStatus, Button, Field, Modal, Seg, StatusBadge, inr, toast, toastError } from '../ui.tsx'
 import Receipt, { type Bill } from '../components/Receipt.tsx'
 import type { Me } from './Shell.tsx'
 
 export type Patient = { id: number; uhid: string; name: string; phone: string; age: number | null; gender: string; address: string }
-
-/** Search by name / phone / UHID, or register a new patient inline. */
-export function PatientPicker({ value, onChange, autoFocus }: { value: Patient | null; onChange: (p: Patient | null) => void; autoFocus?: boolean }) {
-  const [q, setQ] = useState('')
-  const [list, setList] = useState<Patient[]>([])
-  const [open, setOpen] = useState(false)
-  const [hi, setHi] = useState(0)
-  const [adding, setAdding] = useState(false)
-  const box = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const t = setTimeout(() => api<Patient[]>(`/patients?q=${encodeURIComponent(q)}`).then(setList, () => {}), 180)
-    return () => clearTimeout(t)
-  }, [q, open])
-  useEffect(() => {
-    const close = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [])
-
-  if (value)
-    return (
-      <div className="selected-patient">
-        <div className="avatar" style={{ width: 44, height: 44, borderRadius: 14, fontSize: 15, background: 'var(--grad)' }}>
-          {value.name[0]}
-        </div>
-        <div className="grow">
-          <b>{value.name}</b>
-          <div className="small muted">
-            {value.uhid}
-            {value.age != null && ` · ${value.age}y`}
-            {value.gender && ` · ${value.gender}`}
-            {value.phone && ` · ${value.phone}`}
-          </div>
-        </div>
-        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => onChange(null)} aria-label="Change patient">
-          <X />
-        </button>
-      </div>
-    )
-
-  const pick = (p: Patient) => {
-    onChange(p)
-    setOpen(false)
-    setQ('')
-  }
-  return (
-    <div className="picker" ref={box}>
-      <div className="row">
-        <div className="input-icon grow">
-          <Search />
-          <input
-            className="input"
-            placeholder="Search patient by name, mobile or UHID…"
-            value={q}
-            autoFocus={autoFocus}
-            onFocus={() => setOpen(true)}
-            onChange={(e) => {
-              setQ(e.target.value)
-              setOpen(true)
-              setHi(0)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') setHi((h) => Math.min(h + 1, list.length - 1))
-              if (e.key === 'ArrowUp') setHi((h) => Math.max(h - 1, 0))
-              if (e.key === 'Enter' && list[hi]) {
-                e.preventDefault()
-                pick(list[hi])
-              }
-              if (e.key === 'Escape') setOpen(false)
-            }}
-            aria-label="Search patient"
-          />
-        </div>
-        <Button type="button" variant="soft" onClick={() => setAdding(true)}>
-          <UserPlus /> New
-        </Button>
-      </div>
-      {open && (
-        <div className="picker-list">
-          {list.length === 0 && <div className="small muted" style={{ padding: 12 }}>No match. Press “New” to register.</div>}
-          {list.map((p, i) => (
-            <button key={p.id} type="button" className={i === hi ? 'hi' : ''} onMouseEnter={() => setHi(i)} onClick={() => pick(p)}>
-              <span>
-                <b>{p.name}</b>
-                <span className="small muted"> · {p.uhid}</span>
-              </span>
-              <span className="small muted">{p.phone || '—'}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      <NewPatientModal open={adding} onClose={() => setAdding(false)} initialName={/\d/.test(q) ? '' : q} initialPhone={/^\d+$/.test(q) ? q : ''} onCreated={pick} />
-    </div>
-  )
-}
 
 export function NewPatientModal(p: { open: boolean; onClose: () => void; onCreated: (pt: Patient) => void; initialName?: string; initialPhone?: string; edit?: Patient }) {
   const blank = { name: '', phone: '', age: '', gender: '', address: '' }

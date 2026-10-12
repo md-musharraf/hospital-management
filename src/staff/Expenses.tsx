@@ -71,7 +71,7 @@ export default function Expenses() {
             <Empty icon={Wallet} title="No expenses in this period" />
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table rt">
                 <thead>
                   <tr><th>Date</th><th>Category</th><th className="hide-sm">By</th><th className="right">Amount</th>{me.role === 'owner' && <th />}</tr>
                 </thead>

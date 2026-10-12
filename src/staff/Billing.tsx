@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router'
 import { CreditCard, FlaskConical, IndianRupee, Minus, Pill, Plus, Receipt, Search, Smartphone, Stethoscope, Trash, Wallet } from 'lucide-react'
 import { api, invalidate, useApi } from '../api.ts'
 import { Button, Empty, Field, Seg, fmtDay, inr, toast, toastError } from '../ui.tsx'
-import { BillModal, PatientPicker, type Patient } from './common.tsx'
+import { BillModal, type Patient } from './common.tsx'
+import { PatientPicker } from './PatientSearch.tsx'
 import { useMe } from './Shell.tsx'
 import { BILL_LABEL, billTypesFor, type BillType } from '../../shared/catalog.ts'
 
@@ -231,7 +232,7 @@ export default function Billing() {
               <Empty icon={Src.icon} title="No items yet" text={`Search above and press Enter to add a ${Src.noun}.`} />
             ) : (
               <div className="table-wrap" style={{ marginTop: 12 }}>
-                <table className="table">
+                <table className="table rt">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -320,6 +321,15 @@ export default function Billing() {
             <span className="tiny muted" style={{ textAlign: 'center' }}>Ctrl + Enter to save</span>
           </div>
         </aside>
+      </div>
+      <div className="pay-bar">
+        <div>
+          <div className="tiny muted">Total{due > 0 ? ` · due ${inr(due)}` : ''}</div>
+          <b className="num" style={{ fontSize: 20 }}>{inr(total)}</b>
+        </div>
+        <Button busy={busy} onClick={save} disabled={!patient || !subtotal}>
+          Save · {inr(paidP)}
+        </Button>
       </div>
       <BillModal id={billId} onClose={() => setBillId(null)} me={me} />
     </div>

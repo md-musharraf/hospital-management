@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --disable-warning=ExperimentalWarning --watch-path=server --watch-path=shared server/index.ts",
-    "build": "vite build",
+    "build": "vite build && node scripts/compress.js",
     "start": "node --disable-warning=ExperimentalWarning server/index.ts --prod",
     "test": "node --disable-warning=ExperimentalWarning --test tests/api.test.ts",
     "typecheck": "tsc --noEmit"
@@ -28,6 +28,6 @@
     "vite": "^8.3.4"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=24"
   }
 }

@@ -8,7 +8,7 @@ One Node app: a public hospital website with a WhatsApp/web booking bot and a li
 ```bash
 npm install
 npm run dev        # http://localhost:3000 — creates .env and a demo database on first run
-npm test           # API tests: auth/roles/CSRF, billing → live dashboard, stock, bot → OTP portal, queue
+npm test           # API tests: auth/roles/CSRF, billing → live dashboard, stock, bot → OTP portal, queue, search
 npm run build && npm start   # production (serves dist/, strict CSP, cache headers)
 ```
 
@@ -37,6 +37,30 @@ doctors, prices and staff from **Hospital setup** / **Staff accounts**, and fill
 Roles: **owner** (everything), **doctor** (own queue + income), **reception** (registration, tokens, all billing,
 expenses), **lab**, **pharmacy**. Money is stored in paise; income = payments by day (refunds are negative payments).
 
+## Deploy on Railway
+
+1. **New project → Deploy from GitHub repo.** `railway.json` builds the `Dockerfile` (Node 24) and health-checks `/api/health`.
+2. **Add a volume** to the service, mount path `/data`. The app finds it through `RAILWAY_VOLUME_MOUNT_PATH`
+   and keeps `hospital.db` there. Without a volume the database is wiped on every deploy (the log warns you).
+3. **Variables** (service → Variables):
+   - `SEED_DEMO=false` and `OWNER_PASSWORD=<strong password>` for a real hospital, **or**
+     `DEMO_PASSWORD=<your own password>` for a demo. If neither is set, the demo accounts use the built-in
+     default password from `server/index.ts` — change it before sharing the URL.
+   - `HOSPITAL_TZ=Asia/Kolkata` (default) and the `WA_*` WhatsApp keys when ready.
+   - `PUBLIC_URL` is optional: links in WhatsApp messages use Railway's public domain automatically.
+4. **Generate a domain** (Settings → Networking). Point the WhatsApp webhook at `https://<domain>/api/whatsapp/webhook`.
+
+Built for one instance (SQLite on a volume, in-process live sync and rate limits) — keep replicas at 1.
+Static files are pre-compressed with Brotli/Gzip at build time (≈540 KB → 150 KB) and cached for a year; HTML and API
+are never cached. Redeploys close live connections and checkpoint the database before exiting.
+
+## Patient quick search
+
+Top bar on every staff screen (**Ctrl K** or **/**), the billing patient field and the Patients page share one search.
+Type any mix of words — name, any part of the mobile number, UHID (`P000012`), village/address, gender — every word
+must match (`sita 4521`, `kumar rasikpur`, `female 98`). Each suggestion shows today's token, last visit, visit count
+and dues (dues hidden from doctors), with one-tap **Check in & bill**, OPD, Lab, Pharmacy and Profile actions.
+
 ## WhatsApp
 
 Without keys every message is still written to the outbox (Settings → WhatsApp). To go live, fill `WA_*` in `.env`
@@ -51,4 +75,4 @@ app shell and assets, never `/api`. Logging out or "Clear cache" wipes the in-me
 Only essential cookies (`hs_staff`, `hs_patient`, HTTP-only, SameSite=Lax).
 
 Stack: Node 24 (built-in `node:sqlite`, native TypeScript), Express 5, React 19, React Router, Vite, lucide icons,
-self-hosted Manrope. Data lives in `.data/hospital.db` — back that file up.
+self-hosted Manrope. Data lives in `.data/hospital.db` locally or `/data/hospital.db` on Railway — back that file up.

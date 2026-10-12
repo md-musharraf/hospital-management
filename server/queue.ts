@@ -7,7 +7,9 @@ import { HttpError, bad, nowHM, prettyDay, today, addDays, weekday } from './uti
 export type Doctor = { id: number; name: string; department_id: number; fee: number; room: string; days: string; start_time: string; end_time: string; max_tokens: number; active: number }
 export type Appt = { id: number; code: string; patient_id: number; doctor_id: number; date: string; token: number; status: string; notified: number }
 
-export const publicUrl = () => (process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '')
+// Railway sets RAILWAY_PUBLIC_DOMAIN, so WhatsApp links work without configuring PUBLIC_URL.
+export const publicUrl = () =>
+  (process.env.PUBLIC_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${process.env.PORT || 3000}`)).replace(/\/$/, '')
 const ACTIVE = "status IN ('booked','waiting','called')"
 
 export function findOrCreatePatient(p: { name: string; phone: string; age?: number | null; gender?: string }) {

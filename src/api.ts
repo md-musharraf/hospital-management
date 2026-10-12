@@ -98,10 +98,10 @@ export async function clearAllCaches() {
 
 // ---- live sync (Server-Sent Events) ----
 const INVALIDATE: Record<string, string[]> = {
-  payment: ['/dashboard', '/bills', '/desk', '/patients/'],
-  bill: ['/bills', '/lab', '/desk', '/dashboard', '/queue', '/catalog/medicines', '/patients/'],
-  queue: ['/queue', '/desk', '/dashboard'],
-  booking: ['/queue', '/desk', '/dashboard'],
+  payment: ['/dashboard', '/bills', '/desk', '/patients'],
+  bill: ['/bills', '/lab', '/desk', '/dashboard', '/queue', '/catalog/medicines', '/patients'],
+  queue: ['/queue', '/desk', '/dashboard', '/patients'],
+  booking: ['/queue', '/desk', '/dashboard', '/patients'],
   expense: ['/expenses', '/dashboard'],
   catalog: ['/catalog', '/settings', '/dashboard', '/queue'],
   patient: ['/patients'],

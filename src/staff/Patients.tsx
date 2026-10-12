@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, FlaskConical, Pencil, Pill, Search, Stethoscope, UserPlus, Users } from 'lucide-react'
 import { invalidate, useApi } from '../api.ts'
 import { BillStatus, Empty, Skeleton, StatusBadge, fmtDay, fmtDateTime, inr } from '../ui.tsx'
 import { BillModal, NewPatientModal, type Patient } from './common.tsx'
 import { useMe } from './Shell.tsx'
+import { Hl, usePatientSearch } from './PatientSearch.tsx'
 import { billTypesFor } from '../../shared/catalog.ts'
 
 export default function Patients() {
@@ -15,15 +16,18 @@ export default function Patients() {
 function List() {
   const nav = useNavigate()
   const me = useMe()
-  const [q, setQ] = useState('')
+  const [sp, setSp] = useSearchParams()
+  const q = sp.get('q') ?? ''
   const [adding, setAdding] = useState(false)
-  const { data } = useApi<(Patient & { day: string })[]>(`/patients?q=${encodeURIComponent(q.trim())}`)
+  const { rows, total, loading } = usePatientSearch(q, 50)
+  const money = me.role !== 'doctor'
+  const open = (id: number) => nav(`/staff/patients/${id}`)
   return (
     <div className="page">
       <div className="page-h">
         <div>
           <h2>Patients</h2>
-          <p>Every visit, note and bill linked to one UHID.</p>
+          <p>Every visit, note and bill linked to one UHID. Type several words to narrow down — e.g. “sita 4521” or “kumar rasikpur”.</p>
         </div>
         {me.role !== 'doctor' && (
           <button className="btn btn-primary" onClick={() => setAdding(true)}>
@@ -32,28 +36,52 @@ function List() {
         )}
       </div>
       <section className="card">
-        <div className="input-icon" style={{ marginBottom: 14 }}>
+        <div className="input-icon" style={{ marginBottom: 10 }}>
           <Search />
-          <input className="input" placeholder="Search by name, mobile or UHID (e.g. P000012)" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <input
+            className="input"
+            placeholder="Name, mobile (any digits), UHID like P000012, village or gender…"
+            value={q}
+            onChange={(e) => setSp(e.target.value ? { q: e.target.value } : {}, { replace: true })}
+            autoFocus
+            aria-label="Search patients"
+          />
         </div>
-        {!data ? (
+        <div className="row small muted" style={{ marginBottom: 10 }}>
+          {q.trim() ? `${total} match${total === 1 ? '' : 'es'}` : `${total} patients · most recently active first`}
+          {loading && <span className="live-dot" />}
+        </div>
+        {rows.length === 0 && loading ? (
           <div className="stack">{[0, 1, 2].map((i) => <Skeleton key={i} h={44} />)}</div>
-        ) : data.length === 0 ? (
-          <Empty icon={Users} title="No patients match" />
+        ) : rows.length === 0 ? (
+          <Empty icon={Users} title="No patients match" text="Try part of the name, the last digits of the mobile, or the UHID." />
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table rt">
               <thead>
-                <tr><th>UHID</th><th>Name</th><th>Mobile</th><th className="hide-sm">Age / gender</th><th className="hide-sm">Registered</th></tr>
+                <tr>
+                  <th>Patient</th>
+                  <th>Mobile</th>
+                  <th>Age / gender</th>
+                  <th className="hide-sm">Village / address</th>
+                  <th>Last visit</th>
+                  <th>Today</th>
+                  {money && <th className="right">Due</th>}
+                </tr>
               </thead>
               <tbody>
-                {data.map((p) => (
-                  <tr key={p.id} className="click" tabIndex={0} onClick={() => nav(`/staff/patients/${p.id}`)} onKeyDown={(e) => e.key === 'Enter' && nav(`/staff/patients/${p.id}`)}>
-                    <td><span className="badge">{p.uhid}</span></td>
-                    <td><b>{p.name}</b></td>
-                    <td>{p.phone || '—'}</td>
-                    <td className="hide-sm">{[p.age != null && `${p.age}y`, p.gender].filter(Boolean).join(' · ') || '—'}</td>
-                    <td className="hide-sm small muted">{fmtDay(p.day)}</td>
+                {rows.map((p) => (
+                  <tr key={p.id} className="click" tabIndex={0} onClick={() => open(p.id)} onKeyDown={(e) => e.key === 'Enter' && open(p.id)}>
+                    <td>
+                      <b><Hl text={p.name} q={q} /></b>
+                      <div className="tiny muted"><Hl text={p.uhid} q={q.split(/\s+/).filter((t) => /^p\d/i.test(t)).join(' ')} /></div>
+                    </td>
+                    <td><Hl text={p.phone || '—'} q={q} /></td>
+                    <td>{[p.age != null && `${p.age}y`, p.gender].filter(Boolean).join(' · ') || '—'}</td>
+                    <td className="hide-sm small"><Hl text={p.address || '—'} q={q} /></td>
+                    <td className="small">{p.lastVisit ? `${fmtDay(p.lastVisit.date, { day: 'numeric', month: 'short' })} · ${p.lastVisit.doctor}` : '—'}</td>
+                    <td>{p.today ? <span className="row" style={{ gap: 6, justifyContent: 'inherit' }}><span className="badge">#{p.today.token}</span><StatusBadge s={p.today.status} /></span> : '—'}</td>
+                    {money && <td className="right num">{p.due ? <b style={{ color: 'var(--rose)' }}>{inr(p.due)}</b> : '—'}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -61,7 +89,7 @@ function List() {
           </div>
         )}
       </section>
-      <NewPatientModal open={adding} onClose={() => setAdding(false)} onCreated={(p) => nav(`/staff/patients/${p.id}`)} />
+      <NewPatientModal open={adding} onClose={() => setAdding(false)} initialName={/\d/.test(q) ? '' : q.trim()} onCreated={(p) => open(p.id)} />
     </div>
   )
 }

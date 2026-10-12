@@ -48,7 +48,7 @@ export function CatalogManager({ kind, rowStyle, actions, title }: { kind: Catal
         <Empty icon={Building} title={`No ${spec.label.toLowerCase()}`} />
       ) : (
         <div className="table-wrap">
-          <table className="table">
+          <table className="table rt">
             <thead>
               <tr>
                 {cols.map((f) => <th key={f.key} className={f.type === 'money' || f.type === 'int' ? 'right' : ''}>{f.label.replace(/ \(.*\)/, '')}</th>)}

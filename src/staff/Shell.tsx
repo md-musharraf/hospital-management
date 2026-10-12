@@ -7,6 +7,7 @@ import { api, clearAllCaches, startLive, stopLive, useApi, useLiveEvent, useLive
 import { Button, Field, Modal, PageLoader, initials, inr, toast, toastError } from '../ui.tsx'
 import { avatarBg, Brand, type Site } from '../pages/Landing.tsx'
 import { ROLE_LABEL, type Role } from '../../shared/catalog.ts'
+import GlobalSearch from './PatientSearch.tsx'
 import './staff.css'
 
 export type Me = { id: number; name: string; username: string; role: Role; doctor_id: number | null }
@@ -112,6 +113,7 @@ export default function Shell() {
             <Menu />
           </button>
           <h1 className="grow ellipsis">{current.label}</h1>
+          <GlobalSearch me={me} />
           <span className={`live-pill ${live ? '' : 'off'}`} title={live ? 'Live sync connected' : 'Reconnecting…'}>
             <span className="live-dot" /> <span className="hide-sm">{live ? 'Live' : 'Reconnecting'}</span>
           </span>

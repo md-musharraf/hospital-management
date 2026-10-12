@@ -2168,3 +2168,171 @@
     display: none;
   }
 }
+
+/* =========================================================
+   15. Responsive hardening (phone 360+, tablet 768/1024, desktop)
+   Grid tracks are minmax(0, …) so long content wraps instead of widening the page.
+   ========================================================= */
+.wrap > *,
+[class*='-grid'] > *,
+.contact > *,
+.facts > *,
+.steps > * {
+  min-width: 0;
+}
+.rate-card-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 960px) {
+  .hero-grid,
+  .book-grid,
+  .story-canvas,
+  .symptom-triage-container,
+  .transparency-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1080px) {
+  .nav:not(.open) .nav-links {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .nav .wrap {
+    gap: 10px;
+  }
+  .nav:not(.open) .nav-cta {
+    display: none;
+  }
+  .nav.open .nav-cta .btn {
+    flex: 1;
+  }
+  .audience-toggle-nav .aud-btn span {
+    display: none;
+  }
+  .nav .logo {
+    min-width: 0;
+    font-size: 15.5px;
+  }
+  .nav .logo > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wrap {
+    width: min(1200px, 100% - 24px);
+  }
+}
+.hero-aud-switch {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hero-aud-card,
+.aud-txt {
+  min-width: 0;
+}
+.aud-txt > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .hero-aud-card {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .aud-txt > span {
+    display: none;
+  }
+  .pulse-bar-item {
+    display: none;
+  }
+  .pulse-bar-wrap {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between;
+  }
+  .trust {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+.pulse-hotline-btn {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .pulse-bar-wrap {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+}
+.story-nav {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.story-tab {
+  min-width: 0;
+}
+@media (max-width: 1200px) {
+  .story-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 960px) {
+  .story-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .story-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.legal table {
+  display: block;
+  overflow-x: auto;
+}
+.nav .audience-toggle-nav,
+.nav .nav-cta,
+.nav .nav-burger {
+  flex-shrink: 0;
+}
+.aud-btn {
+  white-space: nowrap;
+}
+/* Below 1240px the 7 nav links collapse into the burger menu so the logo never squeezes */
+@media (max-width: 1240px) {
+  .nav:not(.open) .nav-links {
+    display: none;
+  }
+  .nav-burger {
+    display: inline-flex;
+  }
+  .nav.open {
+    background: #fff;
+    box-shadow: var(--sh-2);
+  }
+  .nav.open .wrap {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 14px 0 18px;
+  }
+  .nav.open .nav-links {
+    display: flex;
+    order: 3;
+    width: 100%;
+    flex-direction: column;
+    margin: 12px 0 0;
+    animation: rise 0.35s var(--ease);
+  }
+  .nav.open .nav-cta {
+    order: 4;
+    width: 100%;
+    margin-top: 10px;
+  }
+}
+@media (min-width: 641px) {
+  .nav .logo {
+    flex-shrink: 0;
+  }
+}

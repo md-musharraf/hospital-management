@@ -122,7 +122,7 @@ export default function Portal() {
               <Empty icon={FileText} title="No bills yet" />
             ) : (
               <div className="table-wrap">
-                <table className="table">
+                <table className="table rt">
                   <thead>
                     <tr>
                       <th>Bill</th>

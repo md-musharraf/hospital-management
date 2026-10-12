@@ -108,7 +108,7 @@ export default function Settings() {
           <Empty icon={MessageCircle} title="No messages yet" />
         ) : (
           <div className="table-wrap" style={{ maxHeight: 380, overflowY: 'auto' }}>
-            <table className="table">
+            <table className="table rt">
               <thead>
                 <tr><th>When</th><th>To / from</th><th>Message</th><th>Status</th></tr>
               </thead>
