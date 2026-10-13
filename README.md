@@ -66,6 +66,17 @@ Live sync goes through Vercel's proxy; if a stream is ever held back, the app no
 and refreshes, so screens stay correct. WhatsApp webhook: `https://<render-url>/api/whatsapp/webhook`.
 The same Docker image also runs anywhere with a persistent `DATA_DIR` (e.g. Railway volume at `/data`).
 
+## Free trial on Render (no disk) — MongoDB snapshots
+
+For a client trial on Render's **free** instance (no disk): don't add a disk or `DATA_DIR`, set `MONGODB_URI`
+(MongoDB Atlas free M0 works). The app still runs on SQLite; 30 s after any change, and on every shutdown, it saves
+the whole database into one MongoDB document, and a fresh server restores it before starting.
+
+- Up to ~30 s of entries can be lost on a crash or while a deploy switches servers; 15 MB database limit.
+- Free instances sleep after ~15 min without visitors (first visit then takes about a minute).
+- **Going live:** switch to a paid instance, add the disk at `/data` with `DATA_DIR=/data`, deploy. The first boot on
+  the empty disk restores from MongoDB, so no data is lost. Keep `MONGODB_URI` as an off-site backup or remove it.
+
 ## Patient quick search
 
 Top bar on every staff screen (**Ctrl K** or **/**), the billing patient field and the Patients page share one search.

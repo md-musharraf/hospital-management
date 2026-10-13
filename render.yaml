@@ -1,5 +1,6 @@
 # Render Blueprint — backend API + database (SQLite on a persistent disk).
 # The website is served by Vercel, which forwards /api/* here (see vercel.json).
+# Free trial without a disk: create the service by hand instead, skip DATA_DIR/disk and set MONGODB_URI (see README).
 services:
   - type: web
     name: carepoint-hms # backend URL becomes https://carepoint-hms.onrender.com (Render adds a suffix if taken)

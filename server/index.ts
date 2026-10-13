@@ -23,8 +23,12 @@ if (existsSync(envPath)) process.loadEnvFile(envPath)
 // Persistent storage: on Render point DATA_DIR at the disk mount path (render.yaml sets /data).
 const dataDir = process.env.DATA_DIR || join(root, '.data')
 const dbPath = process.env.DB_PATH || join(dataDir, 'hospital.db')
-if (process.env.RENDER && !process.env.DATA_DIR && !process.env.DB_PATH)
-  console.warn('⚠️  DATA_DIR is not set — the database lives on Render’s temporary disk and is wiped on every deploy. Attach a disk at /data and set DATA_DIR=/data.')
+const mongoUri = process.env.MONGODB_URI
+if (process.env.RENDER && !process.env.DATA_DIR && !process.env.DB_PATH && !mongoUri)
+  console.warn('⚠️  DATA_DIR is not set — the database lives on Render’s temporary disk and is wiped on every deploy. Attach a disk at /data and set DATA_DIR=/data, or set MONGODB_URI for free-plan snapshots.')
+// Free plan without a disk: bring back the last MongoDB snapshot before the database opens.
+const mongo = mongoUri ? await import('./mongoBackup.ts') : null
+if (mongo) console.log('MongoDB snapshot:', await mongo.restoreFromMongo(mongoUri!, dbPath))
 if (prod && !process.env.PUBLIC_URL)
   console.warn('⚠️  PUBLIC_URL is not set — WhatsApp links will point at the backend URL instead of your website (set it to the Vercel URL).')
 const isDemo = process.env.SEED_DEMO !== 'false'
@@ -90,11 +94,21 @@ server.listen(port, host, () => {
   }
 })
 
-// Graceful shutdown on Railway/Docker redeploy
+const { db } = await import('./db.ts')
+if (mongo) {
+  setInterval(() => mongo.backupToMongo(db).catch((e) => console.error('MongoDB snapshot failed:', e.message)), 30_000).unref()
+}
+
+// Graceful shutdown on redeploy / Render free-plan sleep
 const shutdown = () => {
   console.log('Gracefully stopping server...')
+  setTimeout(() => process.exit(1), 25_000).unref() // never hang past the platform's kill timeout
   server.close(async () => {
-    ;(await import('./db.ts')).db.close() // checkpoint the SQLite WAL into the main file
+    if (mongo) {
+      await mongo.backupToMongo(db).catch((e) => console.error('Final MongoDB snapshot failed:', e.message))
+      await mongo.closeMongo()
+    }
+    db.close() // checkpoint the SQLite WAL into the main file
     process.exit(0)
   })
   // Live-sync (SSE) streams never end on their own; cut them after a short grace period.
