@@ -78,7 +78,7 @@ export default function Settings() {
           <div className="stack small" style={{ color: 'var(--ink-2)' }}>
             <p>
               Booking bot, token alerts (“you’re next”), receipts, lab-ready messages and patient login codes all go through WhatsApp. To go live, create a WhatsApp Business app at
-              developers.facebook.com and put these in the server’s <code>.env</code>, then restart:
+              developers.facebook.com and add these to Render → your service → <b>Environment</b> (or the local <code>.env</code>), then redeploy:
             </p>
             <code style={{ display: 'block', padding: 12, borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--line)', whiteSpace: 'pre-wrap' }}>
               WA_TOKEN=…{'\n'}WA_PHONE_NUMBER_ID=…{'\n'}WA_VERIFY_TOKEN=any-secret-you-choose{'\n'}WA_APP_SECRET=…{'\n'}WA_OTP_TEMPLATE=(approved auth template)

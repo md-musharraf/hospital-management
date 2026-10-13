@@ -37,6 +37,28 @@ doctors, prices and staff from **Hospital setup** / **Staff accounts**, and fill
 Roles: **owner** (everything), **doctor** (own queue + income), **reception** (registration, tokens, all billing,
 expenses), **lab**, **pharmacy**. Money is stored in paise; income = payments by day (refunds are negative payments).
 
+## Settings (environment variables)
+
+Local: `.env` (created from `.env.example` on the first `npm run dev`). Render: service → **Environment**.
+Vercel needs none — it only serves the website and forwards `/api` to Render.
+
+| Variable | Local dev | Render trial (free) | Render live (paid + disk) |
+|---|---|---|---|
+| `OWNER_PASSWORD` | – | your password (8+) | your password (8+) |
+| `SEED_DEMO` | `true` | `false` (or `true` + `DEMO_PASSWORD`) | `false` |
+| `DEMO_PASSWORD` | random (auto) | only with demo data | – |
+| `PUBLIC_URL` | `http://localhost:3000` | Vercel URL | Vercel URL |
+| `TRUST_PROXY` | empty | `true` | `true` |
+| `DATA_DIR` | empty (`./.data`) | **not set** | `/data` |
+| `MONGODB_URI` | empty | **Atlas URI** | optional backup |
+| `HOSPITAL_TZ` | `Asia/Kolkata` | default | default |
+| `PORT` / `HOST` | 3000 / empty | set by Render | set by Render |
+| `DB_PATH` | empty | – | – |
+| `WA_TOKEN`, `WA_PHONE_NUMBER_ID`, `WA_VERIFY_TOKEN`, `WA_APP_SECRET`, `WA_OTP_TEMPLATE` | empty | when WhatsApp is ready | when WhatsApp is ready |
+
+Account settings (`SEED_DEMO`, `DEMO_PASSWORD`, `OWNER_PASSWORD`) are used only on the very first start with an empty
+database; later password changes happen in the app (🔑 icon, or **Staff accounts**).
+
 ## Deploy: Render (API + database) and Vercel (website)
 
 ```
@@ -64,7 +86,7 @@ the first deploy (accounts are only created once, on an empty disk).
 
 Live sync goes through Vercel's proxy; if a stream is ever held back, the app notices within a minute, reconnects
 and refreshes, so screens stay correct. WhatsApp webhook: `https://<render-url>/api/whatsapp/webhook`.
-The same Docker image also runs anywhere with a persistent `DATA_DIR` (e.g. Railway volume at `/data`).
+The same Docker image runs on any Docker host that gives it a persistent `DATA_DIR` (or `MONGODB_URI`).
 
 ## Free trial on Render (no disk) — MongoDB snapshots
 

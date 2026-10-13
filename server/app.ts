@@ -19,7 +19,7 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
   // X-Forwarded-For with the visitor IP, so trusting the whole chain (TRUST_PROXY=true) reads it.
   // ponytail: a caller hitting the Render URL directly can fake that IP; per-account lockout and per-phone OTP
   // limits still hold. Add Vercel's origin-secret header if the backend is ever abused directly.
-  const trust = process.env.TRUST_PROXY ?? (process.env.RENDER ? 'true' : 'loopback, linklocal, uniquelocal')
+  const trust = process.env.TRUST_PROXY || (process.env.RENDER ? 'true' : 'loopback, linklocal, uniquelocal')
   app.set('trust proxy', trust === 'true' ? true : trust === 'false' ? false : /^\d+$/.test(trust) ? Number(trust) : trust)
 
   app.use((_req, res, next) => {
@@ -38,7 +38,7 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
     next()
   })
 
-  // Health check for Railway / uptime monitors: proves the process and the database answer.
+  // Health check for Render / uptime monitors: proves the process and the database answer.
   app.get('/api/health', (_req, res) => {
     db.prepare('SELECT 1').get()
     res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) })

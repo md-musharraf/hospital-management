@@ -27,3 +27,5 @@ services:
         sync: false
       - key: PUBLIC_URL # your Vercel website URL, e.g. https://carepoint-hms.vercel.app (used in WhatsApp links)
         sync: false
+      # Optional, add in the dashboard: MONGODB_URI = off-site backup of the database (the free trial depends on it),
+      # and WA_TOKEN / WA_PHONE_NUMBER_ID / WA_VERIFY_TOKEN / WA_APP_SECRET / WA_OTP_TEMPLATE for WhatsApp.
