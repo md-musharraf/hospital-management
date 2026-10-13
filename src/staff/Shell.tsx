@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router'
 import {
-  Building, CalendarCheck, ClipboardList, FlaskConical, KeyRound, LayoutDashboard, LogOut, Menu, Monitor, Pill, Receipt, Settings, ShieldCheck, Stethoscope, Ticket, Trash, Users, Wallet,
+  Building, CalendarCheck, ClipboardList, FlaskConical, KeyRound, LayoutDashboard, LogOut, Menu, Monitor, Pill, Receipt, RefreshCw, Settings, ShieldCheck, Stethoscope, Ticket, Users, Wallet,
 } from 'lucide-react'
 import { api, clearAllCaches, startLive, stopLive, useApi, useLiveEvent, useLiveStatus } from '../api.ts'
 import { Button, Field, Modal, PageLoader, initials, inr, toast, toastError } from '../ui.tsx'
@@ -131,7 +131,7 @@ export default function Shell() {
               setTimeout(() => location.reload(), 600)
             }}
           >
-            <Trash />
+            <RefreshCw />
           </button>
           <button className="btn btn-sm" onClick={logout}>
             <LogOut /> <span className="hide-sm">Log out</span>

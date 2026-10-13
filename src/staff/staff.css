@@ -479,10 +479,44 @@
   font-weight: 700;
   outline: none;
 }
-.total-big {
-  font-size: 34px;
+.sum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  color: var(--ink-2);
+}
+.sum-row .input {
+  width: 130px;
+  height: 38px;
+  text-align: right;
+}
+.sum-total {
+  margin: 6px 0 10px;
+  padding: 12px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.03em;
+}
+.sum-due {
+  color: var(--rose);
+  font-weight: 700;
+}
+.sum-mode {
+  margin: 4px 0;
+}
+.sum-mode .seg {
+  display: flex;
+}
+.sum-mode .seg button {
+  flex: 1;
+  justify-content: center;
+}
+.summary .btn-block {
+  margin-top: 12px;
 }
 .success-tick {
   width: 76px;
@@ -909,4 +943,52 @@ mark {
     backdrop-filter: none;
     background: var(--bg);
   }
+}
+
+/* ============ Classic look for the staff app: flat buttons, smaller corners, no bounce ============ */
+.card,
+.kpi {
+  border-radius: 10px;
+}
+.btn,
+.btn-lg,
+.input,
+.select,
+.textarea,
+.seg,
+.qty,
+.picker-list,
+.selected-patient,
+.side a.nav-item {
+  border-radius: 8px;
+}
+.btn-sm,
+.seg button,
+.picker-list button {
+  border-radius: 6px;
+}
+.btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+.btn-primary,
+.btn-primary:hover {
+  background: var(--brand);
+  box-shadow: none;
+}
+.btn-primary:hover {
+  background: var(--brand-ink);
+}
+.btn-primary::after,
+.side a.nav-item.active::before {
+  display: none;
+}
+.side a.nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+.side a.nav-item:hover svg {
+  transform: none;
+}
+.selected-patient {
+  animation: none;
 }

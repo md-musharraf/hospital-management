@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { CreditCard, FlaskConical, IndianRupee, Minus, Pill, Plus, Receipt, Search, Smartphone, Stethoscope, Trash, Wallet } from 'lucide-react'
+import { CreditCard, FlaskConical, Minus, Pill, Plus, Receipt, Search, Smartphone, Stethoscope, Trash, Wallet } from 'lucide-react'
 import { api, invalidate, useApi } from '../api.ts'
 import { Button, Empty, Field, Seg, fmtDay, inr, toast, toastError } from '../ui.tsx'
 import { BillModal, type Patient } from './common.tsx'
@@ -128,6 +128,7 @@ export default function Billing() {
   })
 
   const Src = SOURCE[type]
+  const saveLabel = !total ? 'Save bill' : paidP ? `Save & collect ${inr(paidP)}` : 'Save as unpaid'
   return (
     <div className="page">
       <div className="page-h">
@@ -149,7 +150,7 @@ export default function Billing() {
         <div className="stack">
           <section className="card">
             <div className="card-h">
-              <h3>1 · Patient</h3>
+              <h3>1. Patient</h3>
             </div>
             <PatientPicker value={patient} onChange={setPatient} autoFocus />
           </section>
@@ -157,37 +158,37 @@ export default function Billing() {
           {type === 'opd' && (
             <section className="card">
               <div className="card-h">
-                <h3>2 · Doctor & token</h3>
-                {appointmentId && <span className="badge violet">Checking in an online booking</span>}
+                <h3>2. Doctor</h3>
+                {appointmentId && <span className="badge violet">Online booking check-in</span>}
               </div>
-              <div className="grid-2">
-                <Field label="Consulting doctor">
-                  <select className="select" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} disabled={!!appointmentId}>
-                    <option value="">No consultation (services only)</option>
-                    {doctors?.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {inr(d.fee)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <div className="stack" style={{ gap: 8, alignContent: 'end' }}>
+              <Field label="Consulting doctor" hint={doctors?.length === 0 ? 'No doctors added yet. The owner can add them in Hospital setup.' : undefined}>
+                <select className="select" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} disabled={!!appointmentId}>
+                  <option value="">No doctor (services only)</option>
+                  {doctors?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} — {inr(d.fee)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {doctor && (
+                <div className="row wrap" style={{ gap: '8px 24px', marginTop: 12 }}>
                   <label className="check">
-                    <input type="checkbox" checked={consult} onChange={(e) => setConsult(e.target.checked)} /> Charge consultation fee
+                    <input type="checkbox" checked={consult} onChange={(e) => setConsult(e.target.checked)} /> Charge consultation fee ({inr(doctor.fee)})
                   </label>
                   {!appointmentId && (
                     <label className="check">
-                      <input type="checkbox" checked={token} onChange={(e) => setToken(e.target.checked)} /> Issue queue token for today
+                      <input type="checkbox" checked={token} onChange={(e) => setToken(e.target.checked)} /> Give queue token for today
                     </label>
                   )}
                 </div>
-              </div>
+              )}
             </section>
           )}
 
           <section className="card">
             <div className="card-h">
-              <h3>{type === 'opd' ? '3' : '2'} · {type === 'opd' ? 'Extra services' : type === 'lab' ? 'Tests' : 'Medicines'}</h3>
+              <h3>{type === 'opd' ? '3' : '2'}. {type === 'opd' ? 'Other services' : type === 'lab' ? 'Tests' : 'Medicines'}</h3>
             </div>
             <div className="picker">
               <div className="input-icon">
@@ -253,7 +254,7 @@ export default function Billing() {
                       </tr>
                     )}
                     {lines.map((l) => (
-                      <tr key={l.key} style={{ animation: 'rise .3s var(--ease)' }}>
+                      <tr key={l.key}>
                         <td>
                           <b>{l.name}</b>
                           {l.kind === 'custom' && <span className="badge" style={{ marginLeft: 6 }}>custom</span>}
@@ -291,35 +292,31 @@ export default function Billing() {
 
         <aside className="card summary">
           <div className="card-h">
-            <h3><Receipt /> Summary</h3>
+            <h3><Receipt /> Bill summary</h3>
           </div>
-          <div className="stack" style={{ gap: 10 }}>
-            <div className="row between"><span className="muted">Subtotal</span><b className="num">{inr(subtotal)}</b></div>
-            <Field label="Discount (₹)">
-              <input className="input" type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
-            </Field>
-            <div className="row between" style={{ padding: '12px 0', borderTop: '1px dashed var(--line-2)', borderBottom: '1px dashed var(--line-2)' }}>
-              <span className="bold">Total payable</span>
-              <span className="total-big num" key={total} style={{ animation: 'pop .35s var(--spring)' }}>{inr(total)}</span>
-            </div>
-            <Field label="Payment mode">
-              <Seg value={mode} onChange={setMode} options={(['cash', 'upi', 'card'] as const).map((m) => {
-                const I = MODE_ICON[m]
-                return { value: m, label: <><I /> {m.toUpperCase()}</> }
-              })} />
-            </Field>
-            <Field label="Amount received now (₹)" hint={paid == null ? 'Full amount by default — change it for part payment' : undefined}>
-              <div className="input-icon">
-                <IndianRupee />
-                <input className="input" type="number" min="0" step="0.01" value={paid ?? (total / 100).toString()} onChange={(e) => setPaid(e.target.value)} />
-              </div>
-            </Field>
-            {due > 0 && <div className="badge rose" style={{ height: 'auto', padding: '8px 12px' }}>Balance due {inr(due)} — can be collected later from Bills</div>}
-            <Button size="lg" busy={busy} onClick={save} disabled={!patient || !subtotal}>
-              Save bill · {inr(paidP)}
-            </Button>
-            <span className="tiny muted" style={{ textAlign: 'center' }}>Ctrl + Enter to save</span>
-          </div>
+          <div className="sum-row"><span>Subtotal</span><b className="num">{inr(subtotal)}</b></div>
+          <label className="sum-row">
+            <span>Discount (₹)</span>
+            <input className="input num" type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
+          </label>
+          <div className="sum-row sum-total"><span>Total</span><b className="num">{inr(total)}</b></div>
+          <Field label="Payment mode" className="sum-mode">
+            <Seg value={mode} onChange={setMode} options={(['cash', 'upi', 'card'] as const).map((m) => {
+              const I = MODE_ICON[m]
+              return { value: m, label: <><I /> {m === 'upi' ? 'UPI' : m[0].toUpperCase() + m.slice(1)}</> }
+            })} />
+          </Field>
+          <label className="sum-row">
+            <span>Received now (₹)</span>
+            <input className="input num" type="number" min="0" step="0.01" value={paid ?? (total / 100).toString()} onChange={(e) => setPaid(e.target.value)} />
+          </label>
+          {due > 0 && <div className="sum-row sum-due"><span>Balance due</span><b className="num">{inr(due)}</b></div>}
+          <Button size="lg" className="btn-block" busy={busy} onClick={save} disabled={!patient || !subtotal}>
+            {saveLabel}
+          </Button>
+          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>
+            {due > 0 ? 'Balance can be collected later from Bills & payments. ' : total ? 'Lower "Received now" for part payment. ' : ''}Ctrl + Enter saves.
+          </p>
         </aside>
       </div>
       <div className="pay-bar">
@@ -328,7 +325,7 @@ export default function Billing() {
           <b className="num" style={{ fontSize: 20 }}>{inr(total)}</b>
         </div>
         <Button busy={busy} onClick={save} disabled={!patient || !subtotal}>
-          Save · {inr(paidP)}
+          {saveLabel}
         </Button>
       </div>
       <BillModal id={billId} onClose={() => setBillId(null)} me={me} />
