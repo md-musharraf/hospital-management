@@ -1,0 +1,28 @@
+# Render Blueprint — backend API + database (SQLite on a persistent disk).
+# The website is served by Vercel, which forwards /api/* here (see vercel.json).
+services:
+  - type: web
+    name: carepoint-hms # backend URL becomes https://carepoint-hms.onrender.com (Render adds a suffix if taken)
+    runtime: docker
+    # plan: not set = Render's smallest paid size. Free instances can't have a disk, so data would vanish on every deploy.
+    region: singapore # closest Render region to India
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    disk:
+      name: hospital-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: TRUST_PROXY
+        value: "true"
+      - key: HOSPITAL_TZ
+        value: Asia/Kolkata
+      - key: SEED_DEMO
+        value: "false"
+      - key: OWNER_PASSWORD # asked once while creating the Blueprint; staff login is owner / this password (8+ chars)
+        sync: false
+      - key: PUBLIC_URL # your Vercel website URL, e.g. https://carepoint-hms.vercel.app (used in WhatsApp links)
+        sync: false

@@ -20,12 +20,13 @@ if (!existsSync(envPath) && !prod) {
 }
 if (existsSync(envPath)) process.loadEnvFile(envPath)
 
-// Railway & Cloud deployment support for persistent volume storage.
-// Railway sets RAILWAY_VOLUME_MOUNT_PATH when a volume is attached, so no extra variable is needed.
-const dataDir = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || join(root, '.data')
+// Persistent storage: on Render point DATA_DIR at the disk mount path (render.yaml sets /data).
+const dataDir = process.env.DATA_DIR || join(root, '.data')
 const dbPath = process.env.DB_PATH || join(dataDir, 'hospital.db')
-if (process.env.RAILWAY_ENVIRONMENT && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !process.env.DATA_DIR && !process.env.DB_PATH)
-  console.warn('⚠️  No Railway volume attached — the database is wiped on every redeploy. Add a volume (mount path /data).')
+if (process.env.RENDER && !process.env.DATA_DIR && !process.env.DB_PATH)
+  console.warn('⚠️  DATA_DIR is not set — the database lives on Render’s temporary disk and is wiped on every deploy. Attach a disk at /data and set DATA_DIR=/data.')
+if (prod && !process.env.PUBLIC_URL)
+  console.warn('⚠️  PUBLIC_URL is not set — WhatsApp links will point at the backend URL instead of your website (set it to the Vercel URL).')
 const isDemo = process.env.SEED_DEMO !== 'false'
 const defaultPass = process.env.DEMO_PASSWORD || (prod ? 'demo12345' : randomBytes(6).toString('base64url'))
 

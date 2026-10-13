@@ -15,9 +15,12 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
 
   const app = express()
   app.disable('x-powered-by')
-  // Behind Railway's proxy the client IP is one hop away (rate limits need the real IP). TRUST_PROXY overrides.
-  const trust = process.env.TRUST_PROXY ?? (process.env.RAILWAY_ENVIRONMENT ? '1' : 'loopback, linklocal, uniquelocal')
-  app.set('trust proxy', /^\d+$/.test(trust) ? Number(trust) : trust)
+  // Rate limits need the visitor's real IP. On Render behind Vercel there are several proxies; Vercel overwrites
+  // X-Forwarded-For with the visitor IP, so trusting the whole chain (TRUST_PROXY=true) reads it.
+  // ponytail: a caller hitting the Render URL directly can fake that IP; per-account lockout and per-phone OTP
+  // limits still hold. Add Vercel's origin-secret header if the backend is ever abused directly.
+  const trust = process.env.TRUST_PROXY ?? (process.env.RENDER ? 'true' : 'loopback, linklocal, uniquelocal')
+  app.set('trust proxy', trust === 'true' ? true : trust === 'false' ? false : /^\d+$/.test(trust) ? Number(trust) : trust)
 
   app.use((_req, res, next) => {
     res.set({
@@ -47,8 +50,11 @@ export function createApp(o: { dbPath: string; demo: boolean; demoPassword?: str
     // Health data: never cache API responses unless a route opts in.
     res.set('Cache-Control', 'no-store')
     // CSRF: cookies are SameSite=Lax; additionally reject cross-site browser writes.
+    // Through Vercel's /api proxy the browser's host arrives in x-forwarded-host; a page on
+    // another site can't set that header without a CORS preflight, which this API never grants.
     const origin = req.get('origin')
-    if (req.method !== 'GET' && origin && !req.path.startsWith('/whatsapp/webhook') && origin.replace(/^https?:\/\//, '') !== req.get('host'))
+    const host = req.get('x-forwarded-host') ?? req.get('host')
+    if (req.method !== 'GET' && origin && !req.path.startsWith('/whatsapp/webhook') && origin.replace(/^https?:\/\//, '') !== host)
       throw new HttpError(403, 'Cross-site request blocked')
     next()
   })

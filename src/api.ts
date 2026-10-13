@@ -109,31 +109,73 @@ const INVALIDATE: Record<string, string[]> = {
 type Listener = (type: string, data: any) => void
 const listeners = new Set<Listener>()
 const statusSubs = new Set<(s: boolean) => void>()
-let es: EventSource | null = null
+/**
+ * EventSource with a watchdog. The server pings every 25 s; if nothing arrives for 60 s (a proxy such as
+ * Vercel's /api rewrite holding the stream back, or a dead connection) it reconnects, and onOpen refetches —
+ * so screens stay correct even when live push is degraded to a once-a-minute refresh.
+ */
+function liveSource(url: string, on: Record<string, (data: any) => void>, onOpen: () => void, onDown: () => void) {
+  let es: EventSource
+  let last = Date.now()
+  const connect = () => {
+    es = new EventSource(url)
+    es.onopen = () => {
+      last = Date.now()
+      onOpen()
+    }
+    es.onerror = onDown
+    es.addEventListener('ping', () => (last = Date.now()))
+    for (const [type, fn] of Object.entries(on))
+      es.addEventListener(type, (ev) => {
+        last = Date.now()
+        fn(JSON.parse((ev as MessageEvent).data))
+      })
+  }
+  connect()
+  const watchdog = setInterval(() => {
+    if (Date.now() - last < 60_000) return
+    es.close()
+    onDown()
+    last = Date.now()
+    connect()
+  }, 10_000)
+  return () => {
+    clearInterval(watchdog)
+    es.close()
+  }
+}
+
+let stopStream: (() => void) | null = null
 let connected = false
+const setStatus = (s: boolean) => {
+  connected = s
+  statusSubs.forEach((f) => f(s))
+}
 
 export function startLive() {
-  if (es) return
-  es = new EventSource('/api/stream')
-  const setStatus = (s: boolean) => {
-    connected = s
-    statusSubs.forEach((f) => f(s))
-  }
-  es.onopen = () => {
-    setStatus(true)
-    invalidate('/') // catch up on anything missed while disconnected
-  }
-  es.onerror = () => setStatus(false)
-  for (const t of [...Object.keys(INVALIDATE), 'announce'])
-    es.addEventListener(t, (ev) => {
-      const data = JSON.parse((ev as MessageEvent).data)
-      if (INVALIDATE[t]) invalidate(...INVALIDATE[t])
-      listeners.forEach((l) => l(t, data))
-    })
+  if (stopStream) return
+  const handlers = Object.fromEntries(
+    [...Object.keys(INVALIDATE), 'announce'].map((t) => [
+      t,
+      (data: any) => {
+        if (INVALIDATE[t]) invalidate(...INVALIDATE[t])
+        listeners.forEach((l) => l(t, data))
+      },
+    ]),
+  )
+  stopStream = liveSource(
+    '/api/stream',
+    handlers,
+    () => {
+      setStatus(true)
+      invalidate('/') // catch up on anything missed while disconnected
+    },
+    () => setStatus(false),
+  )
 }
 export function stopLive() {
-  es?.close()
-  es = null
+  stopStream?.()
+  stopStream = null
   connected = false
 }
 
@@ -160,16 +202,20 @@ export function usePublicQueue(onAnnounce?: (a: { token: number; doctor: string;
   announce.current = onAnnounce
   useEffect(() => {
     let alive = true
-    api<PublicQueue[]>('/public/queue').then((q) => alive && setQueue(q), () => alive && setQueue([]))
-    const src = new EventSource('/api/public/stream')
-    src.addEventListener('queue', (ev) => {
-      const d = JSON.parse((ev as MessageEvent).data)
-      if (d.snapshot) setQueue(d.snapshot)
-    })
-    src.addEventListener('announce', (ev) => announce.current?.(JSON.parse((ev as MessageEvent).data)))
+    const refetch = () => api<PublicQueue[]>('/public/queue').then((q) => alive && setQueue(q), () => alive && setQueue((q) => q ?? []))
+    refetch()
+    const stop = liveSource(
+      '/api/public/stream',
+      {
+        queue: (d) => d.snapshot && setQueue(d.snapshot),
+        announce: (d) => announce.current?.(d),
+      },
+      refetch, // first load, and again after every reconnect
+      () => {},
+    )
     return () => {
       alive = false
-      src.close()
+      stop()
     }
   }, [])
   return queue

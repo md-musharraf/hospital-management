@@ -8,6 +8,7 @@ let base = ''
 const PW = 'test-pass-123'
 
 before(async () => {
+  process.env.TRUST_PROXY = 'true' // same as render.yaml
   const app = createApp({ dbPath: ':memory:', demo: true, demoPassword: PW, prod: false })
   await new Promise<void>((r) => (server = app.listen(0, () => r())))
   base = `http://localhost:${(server.address() as any).port}/api`
@@ -191,4 +192,11 @@ test('health check answers without login', async () => {
   const r = await client()('/health')
   assert.equal(r.status, 200)
   assert.equal(r.data.ok, true)
+})
+
+test('behind the Vercel /api proxy: forwarded host passes the cross-site check, other sites do not', async () => {
+  const viaVercel = { origin: 'https://carepoint.vercel.app', 'x-forwarded-host': 'carepoint.vercel.app', 'x-forwarded-for': '203.0.113.7' }
+  assert.equal((await client()('/auth/login', { username: 'owner', password: PW }, 'POST', viaVercel)).status, 200)
+  const evil = { ...viaVercel, origin: 'https://evil.example' }
+  assert.equal((await client()('/auth/login', { username: 'owner', password: PW }, 'POST', evil)).status, 403)
 })

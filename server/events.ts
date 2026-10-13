@@ -30,7 +30,8 @@ export function emit(type: string, data: unknown, opts: { roles?: Role[]; public
 }
 
 setInterval(() => {
-  for (const c of clients) c.res.write(': ping\n\n')
+  // A real event (not an SSE comment) so browsers can tell a live stream from one a proxy is holding back.
+  for (const c of clients) c.res.write('event: ping\ndata: 1\n\n')
 }, 25_000).unref()
 
 export const clientCount = () => clients.size

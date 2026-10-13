@@ -37,22 +37,34 @@ doctors, prices and staff from **Hospital setup** / **Staff accounts**, and fill
 Roles: **owner** (everything), **doctor** (own queue + income), **reception** (registration, tokens, all billing,
 expenses), **lab**, **pharmacy**. Money is stored in paise; income = payments by day (refunds are negative payments).
 
-## Deploy on Railway
+## Deploy: Render (API + database) and Vercel (website)
 
-1. **New project → Deploy from GitHub repo.** `railway.json` builds the `Dockerfile` (Node 24) and health-checks `/api/health`.
-2. **Add a volume** to the service, mount path `/data`. The app finds it through `RAILWAY_VOLUME_MOUNT_PATH`
-   and keeps `hospital.db` there. Without a volume the database is wiped on every deploy (the log warns you).
-3. **Variables** (service → Variables):
-   - `SEED_DEMO=false` and `OWNER_PASSWORD=<strong password>` for a real hospital, **or**
-     `DEMO_PASSWORD=<your own password>` for a demo. If neither is set, the demo accounts use the built-in
-     default password from `server/index.ts` — change it before sharing the URL.
-   - `HOSPITAL_TZ=Asia/Kolkata` (default) and the `WA_*` WhatsApp keys when ready.
-   - `PUBLIC_URL` is optional: links in WhatsApp messages use Railway's public domain automatically.
-4. **Generate a domain** (Settings → Networking). Point the WhatsApp webhook at `https://<domain>/api/whatsapp/webhook`.
+```
+browser ──► Vercel (website files) ──/api/*──► Render (Node API + SQLite on a disk)
+```
+Vercel forwards every `/api` request to Render (`vercel.json`), so the browser only ever talks to one domain:
+login cookies, live sync and the strict CSP work unchanged, no CORS needed.
 
-Built for one instance (SQLite on a volume, in-process live sync and rate limits) — keep replicas at 1.
-Static files are pre-compressed with Brotli/Gzip at build time (≈540 KB → 150 KB) and cached for a year; HTML and API
-are never cached. Redeploys close live connections and checkpoint the database before exiting.
+**1. Render (backend first)**
+1. render.com → **New → Blueprint** → pick this GitHub repo. `render.yaml` creates the `carepoint-hms` service
+   (Docker, Singapore, health check `/api/health`, 1 GB disk at `/data`).
+2. Render asks for `OWNER_PASSWORD` (8+ characters; staff login is `owner`) and `PUBLIC_URL` (your Vercel URL —
+   if you don't know it yet, enter `https://carepoint-hms.vercel.app` and fix it later).
+3. Disks need a paid instance; free instances lose all data on every deploy. Keep 1 instance.
+4. After the deploy, open `https://<render-url>/api/health` → `{"ok":true}`. Note the exact Render URL.
+
+**2. Vercel (website)**
+1. If the Render URL is not exactly `https://carepoint-hms.onrender.com`, change it in `vercel.json` and push.
+2. vercel.com → **Add New → Project** → import the repo. `vercel.json` sets the build (`npm run build:web`,
+   output `dist`); no environment variables are needed on Vercel.
+3. Open the Vercel URL → website; `/staff/login` → owner login. Put this URL in Render's `PUBLIC_URL` if it differs.
+
+**Demo instead of a real hospital:** in Render set `SEED_DEMO=true` and `DEMO_PASSWORD=<your password>` *before*
+the first deploy (accounts are only created once, on an empty disk).
+
+Live sync goes through Vercel's proxy; if a stream is ever held back, the app notices within a minute, reconnects
+and refreshes, so screens stay correct. WhatsApp webhook: `https://<render-url>/api/whatsapp/webhook`.
+The same Docker image also runs anywhere with a persistent `DATA_DIR` (e.g. Railway volume at `/data`).
 
 ## Patient quick search
 
@@ -75,4 +87,4 @@ app shell and assets, never `/api`. Logging out or "Clear cache" wipes the in-me
 Only essential cookies (`hs_staff`, `hs_patient`, HTTP-only, SameSite=Lax).
 
 Stack: Node 24 (built-in `node:sqlite`, native TypeScript), Express 5, React 19, React Router, Vite, lucide icons,
-self-hosted Manrope. Data lives in `.data/hospital.db` locally or `/data/hospital.db` on Railway — back that file up.
+self-hosted Manrope. Data lives in `.data/hospital.db` locally or `/data/hospital.db` on Render — back that file up.
