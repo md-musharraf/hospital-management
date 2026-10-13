@@ -28,7 +28,8 @@ export default function IncomeChart({ data }: { data: Point[] }) {
   const W = 720
   const H = 240
   const pad = { l: 52, r: 8, t: 12, b: 28 }
-  const max = nice(Math.max(...data.map((d) => Math.max(d.income, d.expense)), 1))
+  // At least ₹1,000 on the axis, so a new hospital with no bills doesn't show ₹0.0025 steps.
+  const max = nice(Math.max(...data.map((d) => Math.max(d.income, d.expense)), 100_000))
   const iw = W - pad.l - pad.r
   const ih = H - pad.t - pad.b
   const slot = iw / data.length
